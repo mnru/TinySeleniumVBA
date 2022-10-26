@@ -39,12 +39,9 @@ Attribute VB_Exposed = False
 ' OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ' SOFTWARE.
 ' ==========================================================================
-
 Option Explicit
-
 Public DefaultSessionId As String
 Public UrlBase As String
-
 ' Driver commands
 Public CMD_STATUS
 Public CMD_NEW_SESSION
@@ -167,9 +164,7 @@ Public CMD_SWITCH_TO_CONTEXT
 Public CMD_FULLSCREEN_WINDOW
 Public CMD_MINIMIZE_WINDOW
 Public CMD_SHUTDOWN
-
 Private Const ELEMENT_KEY = "element-6066-11e4-a52e-4f735466cecf"
-
 Public Enum By
     ID = 0
     TagName = 1
@@ -180,20 +175,17 @@ Public Enum By
 End Enum
 
 Public BrowserName As String
-
-
 ' ==========================================================================
 ' Setup and shutdown
 ' ==========================================================================
-
 ' Launch Edge Driver
-Public Sub Edge(ByVal driverPath As String, Optional ByVal driverUrl As String = "http://localhost:9515")
-    Start driverPath, driverUrl, "MicrosoftEdge"
+Public Sub Edge(ByVal DriverPath As String, Optional ByVal driverUrl As String = "http://localhost:9515")
+    Start DriverPath, driverUrl, "MicrosoftEdge"
 End Sub
 
 ' Launch Chrome Driver
-Public Sub Chrome(ByVal driverPath As String, Optional ByVal driverUrl As String = "http://localhost:9515")
-    Start driverPath, driverUrl, "chrome"
+Public Sub Chrome(ByVal DriverPath As String, Optional ByVal driverUrl As String = "http://localhost:9515")
+    Start DriverPath, driverUrl, "chrome"
 End Sub
 
 ' Get default capabilities for current browser
@@ -204,19 +196,16 @@ Public Function CreateCapabilities()
 End Function
 
 ' Start WebDriver
-Public Sub Start(ByVal driverPath As String, ByVal driverUrl As String, Optional ByVal driverName As String = vbNullString)
+Public Sub Start(ByVal DriverPath As String, ByVal driverUrl As String, Optional ByVal driverName As String = vbNullString)
     ' Start WebDriver executable
-    If Shell(driverPath, vbMinimizedNoFocus) = 0 Then
+    If Shell(DriverPath, vbMinimizedNoFocus) = 0 Then
         MsgBox "Failed in starting WebDriver"
         End
     End If
-    
     ' Set WebDriver url
     UrlBase = driverUrl
-    
     ' Initialize driver commands
     InitCommands
-    
     ' Set browser name
     BrowserName = driverName
 End Sub
@@ -226,11 +215,9 @@ Public Sub Shutdown()
     Execute CMD_SHUTDOWN
 End Sub
 
-
 ' ==========================================================================
 ' Browser operations
 ' ==========================================================================
-
 ' Open browser
 Public Function OpenBrowser(Optional Capabilities As Object = Nothing, Optional desiredCapabilities As Dictionary = Nothing, Optional ByVal useAsDefault As Boolean = True) As String
     Dim capDict As Dictionary
@@ -243,14 +230,11 @@ Public Function OpenBrowser(Optional Capabilities As Object = Nothing, Optional 
     Else
         Err.Raise 13, "WebDriver.OpenBrowser", "Argument capabilities must be an instance of Capabilities or Dictionary"
     End If
-
     Dim resp As Dictionary
     Set resp = Execute(CMD_NEW_SESSION, Params("capabilities", capDict, "desiredCapabilities", desiredCapabilities))
-    
     If useAsDefault Then
         DefaultSessionId = resp("sessionId")
     End If
-    
     OpenBrowser = resp("sessionId")
 End Function
 
@@ -260,7 +244,6 @@ Public Sub CloseBrowser(Optional ByVal sessionId As String = vbNullString)
     If sessionId <> vbNullString Then
         data.Add "sessionId", sessionId
     End If
-    
     Execute CMD_QUIT, data
     DefaultSessionId = vbNullString
 End Sub
@@ -272,15 +255,12 @@ Public Sub Navigate(ByVal url As String, Optional ByVal sessionId As String = vb
         data.Add "sessionId", sessionId
     End If
     data.Add "url", url
-    
     Execute CMD_GET, data
 End Sub
-
 
 ' ==========================================================================
 ' DOM operations
 ' ==========================================================================
-
 ' Find DOM element
 Public Function FindElement(by_ As By, value As String, Optional parentElementId As String = vbNullString, Optional ByVal sessionId As String = vbNullString) As WebElement
     Dim data As Dictionary
@@ -288,7 +268,6 @@ Public Function FindElement(by_ As By, value As String, Optional parentElementId
     If sessionId <> vbNullString Then
         data.Add "sessionId", sessionId
     End If
-    
     Dim cmd
     If parentElementId <> vbNullString Then
         data.Add "id", parentElementId
@@ -296,7 +275,6 @@ Public Function FindElement(by_ As By, value As String, Optional parentElementId
     Else
         cmd = CMD_FIND_ELEMENT
     End If
-    
     ' Return element
     Set FindElement = ToWebElement(Execute(cmd, data)(ELEMENT_KEY), sessionId)
 End Function
@@ -308,7 +286,6 @@ Public Function FindElements(by_ As By, value As String, Optional parentElementI
     If sessionId <> vbNullString Then
         data.Add "sessionId", sessionId
     End If
-    
     Dim cmd
     If parentElementId <> vbNullString Then
         data.Add "id", parentElementId
@@ -316,10 +293,8 @@ Public Function FindElements(by_ As By, value As String, Optional parentElementI
     Else
         cmd = CMD_FIND_ELEMENTS
     End If
-    
     Dim elements
     Set elements = Execute(cmd, data)
-    
     ' To array of ids
     Dim ret() As WebElement
     Dim i As Integer
@@ -327,7 +302,6 @@ Public Function FindElements(by_ As By, value As String, Optional parentElementI
         ReDim Preserve ret(i)
         Set ret(i) = ToWebElement(elements(i + 1)(ELEMENT_KEY), sessionId)
     Next
-    
     ' Return element ids
     FindElements = ret
 End Function
@@ -338,7 +312,7 @@ Private Function ToSelector(by_ As By, ByVal value As String) As Dictionary
     If (by_ = By.XPath) Then
         'Locator Strategy XPath
         data.Add "using", "xpath"
-    Else:
+        Else:
         'Use Css Selector for Locator strategies other than
         data.Add "using", "css selector"
         If by_ = By.ID Then
@@ -366,6 +340,76 @@ Private Function ToWebElement(ByVal elementId As String, Optional ByVal sessionI
     Set ToWebElement = element
 End Function
 
+' Returns element.attribute
+Public Function GetAttribute(attributeName As String, elementId As String, Optional ByVal sessionId As String = vbNullString) As String
+    Dim script As String
+    Select Case UCase(attributeName)
+        Case "INNERHTML"
+            script = "return arguments[0].innerHTML"
+        Case "OUTERHTML"
+            script = "return arguments[0].outerHTML"
+        Case "INNERTEXT"
+            script = "return arguments[0].innerText"
+        Case "TAGNAME"
+            script = "return arguments[0].tagName"
+        Case Else
+            script = ""
+    End Select
+    If script <> "" Then
+        GetAttribute = ExecuteScript(script, Array(idToArg(elementId)), sessionId)
+    Else
+        Dim data As New Dictionary
+        If sessionId <> vbNullString Then
+            data.Add "sessionId", sessionId
+        End If
+        data.Add "id", elementId
+        data.Add "name", attributeName
+        GetAttribute = Execute(CMD_GET_ELEMENT_ATTRIBUTE, data)
+    End If
+End Function
+
+'table to WebElement Array
+Public Function TableToWElmAry(elementId As String, Optional ByVal sessionId As String = vbNullString)
+    Dim ret()
+    Dim trs, tds
+    Dim tg
+    Dim ub As Integer, i As Integer
+    tg = GetAttribute("tagName", elementId, sessionId)
+    If UCase(tg) <> "TABLE" Then
+        Err.Raise 13, "WebDriver.TableToWElmAry", "Element must be Table"
+    End If
+    trs = FindElements(By.CssSelector, ":scope>thead>tr,:scope>tbody>tr,:scope>tfoot>tr", elementId, sessionId)
+    Dim tr As WebElement
+    ub = UBound(trs)
+    ReDim ret(0 To ub)
+    For i = 0 To ub
+        tds = trs(i).FindElements(By.CssSelector, ":scope>th,:scope>td")
+        ret(i) = tds
+    Next
+    TableToWElmAry = ret
+End Function
+
+'WebElement Array To Attribute of WebElement Array
+Public Function WElmAryToAttrAry(welmAry, Optional attr As String = "innerText")
+    Dim r, c, ubr, ubc
+    Dim ret
+    Dim tmp
+    Dim welm As WebElement
+    ubr = UBound(welmAry)
+    ReDim ret(0 To ubr)
+    For r = 0 To ubr
+        ubc = UBound(welmAry(r))
+        ReDim x(0 To ubc)
+        For c = 0 To ubc
+            Set welm = welmAry(r)(c)
+            tmp = welm.GetAttribute(attr)
+            x(c) = tmp
+        Next
+        ret(r) = x
+    Next
+    WElmAryToAttrAry = ret
+End Function
+
 ' Returns element.value
 Public Function GetValue(elementId As String, Optional ByVal sessionId As String = vbNullString) As String
     Dim data As New Dictionary
@@ -374,7 +418,6 @@ Public Function GetValue(elementId As String, Optional ByVal sessionId As String
     End If
     data.Add "id", elementId
     data.Add "name", "value"
-
     GetValue = Execute(CMD_GET_ELEMENT_ATTRIBUTE, data)
 End Function
 
@@ -386,7 +429,6 @@ Public Sub SetValue(elementId As String, text As String, Optional ByVal sessionI
     End If
     data.Add "id", elementId
     data.Add "text", text
-    
     Dim chars() As String
     ReDim chars(Len(text) - 1)
     Dim i As Integer
@@ -394,7 +436,6 @@ Public Sub SetValue(elementId As String, text As String, Optional ByVal sessionI
         chars(i) = Mid(text, i + 1, 1)
     Next
     data.Add "value", chars
-    
     Execute CMD_CLEAR_ELEMENT, data
     Execute CMD_SEND_KEYS_TO_ELEMENT, data
 End Sub
@@ -406,7 +447,6 @@ Public Sub Click(elementId As String, Optional ByVal sessionId As String = vbNul
         data.Add "sessionId", sessionId
     End If
     data.Add "id", elementId
-
     Execute CMD_CLICK_ELEMENT, data
 End Sub
 
@@ -417,7 +457,6 @@ Public Function GetText(elementId As String, Optional ByVal sessionId As String 
         data.Add "sessionId", sessionId
     End If
     data.Add "id", elementId
-
     GetText = Execute(CMD_GET_ELEMENT_TEXT, data)
 End Function
 
@@ -429,7 +468,6 @@ Private Function ScriptDictToConvertedDict(dict As Variant, Optional ByVal sessi
         ' Return immediately (ignore other items if they exist)
         Exit Function
     End If
-
     Dim ret As New Dictionary
     Dim key
     For Each key In dict
@@ -443,7 +481,6 @@ Private Function ScriptDictToConvertedDict(dict As Variant, Optional ByVal sessi
             ret(key) = dict(key)
         End If
     Next
-    
     Set ScriptDictToConvertedDict = ret
 End Function
 
@@ -452,7 +489,6 @@ Private Function ScriptCollectionToConvertedArray(col As Variant, Optional ByVal
     Dim ary()
     ReDim ary(col.Count - 1)
     Dim i As Integer
-    
     For i = 0 To UBound(ary)
         If TypeName(col(i + 1)) = "Collection" Then
             ary(i) = ScriptCollectionToConvertedArray(col(i + 1))
@@ -467,6 +503,14 @@ Private Function ScriptCollectionToConvertedArray(col As Variant, Optional ByVal
     ScriptCollectionToConvertedArray = ary
 End Function
 
+'create dictionary from elementID to use as script argument
+Private Function idToArg(elementId As String) As Dictionary
+    Dim ret As Dictionary
+    Set ret = New Dictionary
+    ret.Add ELEMENT_KEY, elementId
+    Set idToArg = ret
+End Function
+
 ' Execute script
 Public Function ExecuteScript(ByVal script As String, Optional scriptArguments As Variant = Empty, Optional ByVal sessionId As String = vbNullString)
     Dim data As New Dictionary
@@ -474,33 +518,32 @@ Public Function ExecuteScript(ByVal script As String, Optional scriptArguments A
         data.Add "sessionId", sessionId
     End If
     data.Add "script", script
-    
     Dim args()
     If Not IsEmpty(scriptArguments) Then
         ' Abort if scriptArguments passed but not array
         If VarType(scriptArguments) < vbArray Then
             Err.Raise 13, "WebDriver.ExecuteScript", "scriptArguments must be array"
         End If
-        
-        Dim i As Integer
-        For i = 0 To UBound(scriptArguments)
-            ReDim Preserve args(i)
+        Dim ub As Integer, i As Integer
+        ub = UBound(scriptArguments)
+        ReDim args(0 To ub)
+        For i = 0 To ub
             If TypeName(scriptArguments(i)) = "WebElement" Then
                 ' Convert WebElement to Dictionary that can be handled by WebDriver
-                Dim elem As New Dictionary
-                elem.Add ELEMENT_KEY, scriptArguments(i).ElementId_
-                Set args(i) = elem
+                Set args(i) = idToArg(scriptArguments(i).ElementId_)
             Else
-                args(i) = scriptArguments(i)
+                If IsObject(scriptArguments(i)) Then
+                    Set args(i) = scriptArguments(i)
+                Else
+                    args(i) = scriptArguments(i)
+                End If
             End If
         Next
     End If
     data.Add "args", args
-
     ' Use resp temporarily to return value that varies depending on the contents of script
     Dim resp
     Set resp = Execute(CMD_W3C_EXECUTE_SCRIPT, data, True)
-    
     If TypeName(resp("value")) = "Collection" Then
         ExecuteScript = ScriptCollectionToConvertedArray(resp("value"), sessionId)
     ElseIf TypeName(resp("value")) = "Dictionary" Then
@@ -515,11 +558,9 @@ Public Function ExecuteScript(ByVal script As String, Optional scriptArguments A
     End If
 End Function
 
-
 ' ==========================================================================
 ' Common functions
 ' ==========================================================================
-
 ' Execute driver command
 Public Function Execute(driverCommand, Optional parameters As Dictionary = Nothing, Optional asRawResponse As Boolean = False)
     Dim method As String: method = driverCommand(0)
@@ -527,12 +568,10 @@ Public Function Execute(driverCommand, Optional parameters As Dictionary = Nothi
     If parameters Is Nothing Then
         Set parameters = New Dictionary
     End If
-    
     ' Set default session id if session id is missing
     If Not parameters.Exists("sessionId") Then
         parameters.Add "sessionId", DefaultSessionId
     End If
-    
     ' Set params to path
     Dim paramKey As Variant
     For Each paramKey In parameters
@@ -540,11 +579,9 @@ Public Function Execute(driverCommand, Optional parameters As Dictionary = Nothi
             path = Replace(path, "$" + paramKey, parameters(paramKey))
         End If
     Next
-
     ' Send request to selenium server
     Dim resp As Dictionary
     Set resp = SendRequest(method, UrlBase + path, parameters)
-    
     ' Return value(s)
     If asRawResponse Then
         Set Execute = resp
@@ -567,25 +604,20 @@ End Function
 Private Function SendRequest(method As String, url As String, Optional data As Dictionary = Nothing) As Dictionary
     Dim client As Object
     Set client = CreateObject("MSXML2.ServerXMLHTTP")
-    
     client.Open method, url
-    
     If method = "POST" Or method = "PUT" Then
         client.setRequestHeader "Content-Type", "application/json"
         client.send JsonConverter.ConvertToJson(data)
     Else
         client.send
     End If
-
     Do While client.readyState < 4
         DoEvents
     Loop
-
     Dim Json As Object
     Set Json = JsonConverter.ParseJson(client.responseText)
     Set SendRequest = Json
 End Function
-
 
 ' ==========================================================================
 ' Driver commands
@@ -714,11 +746,9 @@ Private Sub InitCommands()
     CMD_SHUTDOWN = Array("GET", "/shutdown")
 End Sub
 
-
 ' ==========================================================================
 ' Utility functions
 ' ==========================================================================
-
 ' KeyValue arguments to parameters as dictionaly
 Private Function Params(ParamArray keysAndValues()) As Dictionary
     Dim dict As New Dictionary

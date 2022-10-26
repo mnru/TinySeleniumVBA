@@ -39,13 +39,10 @@ Attribute VB_Exposed = False
 ' OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ' SOFTWARE.
 ' ==========================================================================
-
 Option Explicit
-
 Public Driver_ As WebDriver
 Public SessionId_ As String
 Public ElementId_ As String
-
 ' Find DOM element
 Public Function FindElement(by_ As By, value As String) As WebElement
     Set FindElement = Driver_.FindElement(by_, value, ElementId_, SessionId_)
@@ -54,6 +51,16 @@ End Function
 ' Find multiple DOM elements
 Public Function FindElements(by_ As By, value As String) As WebElement()
     FindElements = Driver_.FindElements(by_, value, ElementId_, SessionId_)
+End Function
+
+'table to WebElement Array
+Public Function TableToWElmAry()
+    TableToWElmAry = Driver_.TableToWElmAry(ElementId_, SessionId_)
+End Function
+
+' Returns element.attribute
+Public Function GetAttribute(attributeName As String) As String
+    GetAttribute = Driver_.GetAttribute(attributeName, ElementId_, SessionId_)
 End Function
 
 ' Returns element.value
@@ -75,4 +82,3 @@ End Sub
 Public Function GetText() As String
     GetText = Driver_.GetText(ElementId_, SessionId_)
 End Function
-
